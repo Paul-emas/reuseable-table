@@ -1,4 +1,4 @@
-import { Fragment, ReactNode } from "react";
+import { Fragment, ReactNode, useCallback } from "react";
 import { cn, splitStringByUnderscore } from "@/lib/utils";
 import {
   Table,
@@ -12,19 +12,17 @@ import {
 type StringKeys<T> = Extract<keyof T, string>;
 
 export interface CustomDynamicTableProps<T> {
-  tableData: T[];
-  tableColumns: StringKeys<T>[];
+  tableData: T[]; // Array of table row data
+  tableColumns: StringKeys<T>[]; // Array of column keys to display
   excludeColumns?: StringKeys<T>[];
-  stickyHeaders?: boolean;
-  selectedItems?: T[];
   className?: string;
-  rowClassName?: string;
-  customHeadRender?: (col: StringKeys<T>) => ReactNode | null | undefined;
+  rowClassName?: string | ((row: T) => string);
+  customHeadRender?: (col: StringKeys<T>) => ReactNode | null | undefined; // Custom render function for table headers
   customBodyRender?: (
     rowData: T,
     col: StringKeys<T>
-  ) => ReactNode | null | undefined;
-  onRowClick?: (rowData: T) => void;
+  ) => ReactNode | null | undefined; // Custom render function for table cells
+  onRowClick?: (rowData: T) => void; // Click handler for table rows
 }
 
 const CustomDynamicTable = <T extends object>(
@@ -33,24 +31,41 @@ const CustomDynamicTable = <T extends object>(
   const {
     tableColumns,
     tableData,
-    stickyHeaders = true,
     excludeColumns = [],
     className,
     rowClassName = "",
-    selectedItems = [],
     customHeadRender,
     customBodyRender,
     onRowClick,
   } = props;
 
-  function shouldRender(key: Extract<keyof T, string>) {
+  function shouldRender(key: StringKeys<T>) {
     if (excludeColumns.includes(key)) return false;
     return true;
   }
 
-  function isSelected(rowData: T) {
-    return selectedItems.some((item) => item === rowData);
-  }
+  const whatToRenderHeader = (col: StringKeys<T>) => {
+    if (!shouldRender(col)) return null;
+    const renderedContent = customHeadRender ? customHeadRender(col) : null;
+    return renderedContent || splitStringByUnderscore(col);
+  };
+
+  const whatToRenderBody = (row: T, col: StringKeys<T>) => {
+    if (!shouldRender(col)) return null;
+    const renderedContent = customBodyRender
+      ? customBodyRender(row, col)
+      : null;
+    return renderedContent || (row[col] as ReactNode);
+  };
+
+  // Memoized row click handler to prevent unnecessary re-renders
+  const handleRowClick = useCallback(
+    (row: T) => {
+      if (!onRowClick) return;
+      onRowClick(row);
+    },
+    [onRowClick]
+  );
 
   return (
     <div className={cn("relative w-full overflow-auto", className)}>
@@ -58,24 +73,15 @@ const CustomDynamicTable = <T extends object>(
         <TableHeader>
           <TableRow className="bg-muted">
             {tableColumns.map((col) => {
-              const whatToRender = () => {
-                if (!shouldRender(col)) return null;
-                const renderedContent = customHeadRender
-                  ? customHeadRender(col)
-                  : null;
-                return renderedContent || splitStringByUnderscore(col);
-              };
-
               return (
                 <Fragment key={col}>
                   {shouldRender(col) ? (
                     <TableHead
                       className={cn(
-                        "whitespace-nowrap first-letter:capitalize",
-                        stickyHeaders && "sticky top-0 z-10 bg-muted"
+                        "whitespace-nowrap first-letter:capitalize"
                       )}
                     >
-                      {whatToRender()}
+                      {whatToRenderHeader(col)}
                     </TableHead>
                   ) : null}
                 </Fragment>
@@ -89,25 +95,18 @@ const CustomDynamicTable = <T extends object>(
               <TableRow
                 key={idx}
                 className={cn(
-                  rowClassName,
-                  isSelected(row) ? "bg-slate-200 hover:bg-slate-200" : ""
+                  typeof rowClassName === "function"
+                    ? rowClassName(row)
+                    : rowClassName
                 )}
-                onClick={() => (onRowClick ? onRowClick(row) : {})}
+                onClick={() => handleRowClick(row)}
               >
                 {tableColumns.map((col) => {
-                  const whatToRender = () => {
-                    if (!shouldRender(col)) return null;
-                    const renderedContent = customBodyRender
-                      ? customBodyRender(row, col)
-                      : null;
-                    return renderedContent || (row[col] as ReactNode);
-                  };
-
                   return (
                     <Fragment key={col}>
                       {shouldRender(col) ? (
                         <TableCell className="whitespace-nowrap">
-                          {whatToRender()}
+                          {whatToRenderBody(row, col)}
                         </TableCell>
                       ) : null}
                     </Fragment>

@@ -1,6 +1,6 @@
 export const employees = [
   {
-    id: 1,
+    id: "1",
     name: "John Doe",
     age: 30,
     department: "Engineering",
@@ -14,7 +14,7 @@ export const employees = [
     manager: "Jane Smith",
   },
   {
-    id: 2,
+    id: "2",
     name: "Alice Johnson",
     age: 28,
     department: "Marketing",
@@ -28,7 +28,7 @@ export const employees = [
     manager: "Robert Brown",
   },
   {
-    id: 3,
+    id: "3",
     name: "Michael Lee",
     age: 35,
     department: "Human Resources",
