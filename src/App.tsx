@@ -2,6 +2,7 @@ import { useState } from "react";
 import "./App.css";
 import CustomDynamicTable from "./components/CustomDynamicTable";
 import { employees } from "./data/employee";
+import { cn } from "./lib/utils";
 
 function App() {
   const [selected, setSelected] = useState<string[]>([]);
@@ -25,7 +26,10 @@ function App() {
         excludeColumns={["department"]}
         onRowClick={handleRowClick}
         rowClassName={(row) =>
-          row.age >= 18 ? "bg-slate-200 hover:bg-slate-200" : ""
+          cn(
+            row.age >= 18 ? "bg-red-100" : "",
+            selected.includes(row.id) ? "bg-slate-100" : ""
+          )
         }
         customBodyRender={(row, col) => {
           if (col === "name") {
